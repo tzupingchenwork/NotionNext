@@ -1,12 +1,18 @@
 import { siteConfig } from '@/lib/config'
 import { compressImage, mapImgUrl } from '@/lib/db/notion/mapImage'
+import NotionEmbed from '@/components/NotionEmbed'
 import NotionLink from '@/components/NotionLink'
 import { isBrowser, loadExternalResource } from '@/lib/utils'
 import mediumZoom from '@fisch0920/medium-zoom'
 import 'katex/dist/katex.min.css'
 import dynamic from 'next/dynamic'
 import { useEffect, useRef } from 'react'
-import { NotionRenderer } from 'react-notion-x'
+import {
+  NotionRenderer,
+  PageIcon,
+  Text as NotionRendererText
+} from 'react-notion-x'
+import OriginalityProof from './OriginalityProof'
 
 /**
  * 整个站点的核心组件
@@ -120,16 +126,19 @@ const NotionPage = ({ post, className }) => {
         components={{
           Code,
           Collection,
+          Embed: NotionEmbed,
           Equation,
           Link: NotionLink,
           Modal,
           Pdf,
           Quote: NotionQuote,
+          Callout: NotionCallout,
           Tweet
         }}
       />
 
       <AdEmbed />
+      <OriginalityProof proof={post?.originalityProof} />
       {hasCodeBlock(post?.blockMap) && <PrismMac />}
     </div>
   )
@@ -142,7 +151,6 @@ const hasCodeBlock = blockMap => {
     item => item?.value?.type === 'code'
   )
 }
-
 
 /**
  * 页面的数据库链接禁止跳转，只能查看
@@ -281,10 +289,7 @@ const AdEmbed = dynamic(
 )
 
 const Collection = dynamic(
-  () =>
-    import('react-notion-x/build/third-party/collection').then(
-      m => m.Collection
-    ),
+  () => import('@/components/NotionCollection'),
   {
     ssr: true
   }
@@ -308,6 +313,29 @@ const NotionQuote = ({ block, children }) => {
       {title && <NotionText value={title} />}
       {children}
     </blockquote>
+  )
+}
+
+const NotionCallout = ({ block, className, children }) => {
+  const blockColor = block?.format?.block_color
+  const hasIcon = Boolean(block?.format?.page_icon)
+  const classNames = [
+    'notion-callout',
+    blockColor ? `notion-${blockColor}_co` : '',
+    hasIcon ? '' : 'notion-callout-no-icon',
+    className || ''
+  ].filter(Boolean).join(' ')
+
+  return (
+    <div className={classNames}>
+      {hasIcon && <PageIcon block={block} hideDefaultIcon />}
+      <div
+        className='notion-callout-text'
+        style={hasIcon ? undefined : { marginLeft: 0 }}>
+        <NotionRendererText value={block?.properties?.title} block={block} />
+        {children}
+      </div>
+    </div>
   )
 }
 
